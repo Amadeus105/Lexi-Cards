@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Статистика — Lexi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css" />
+<link rel="stylesheet" href="/static/stats.css" />
+</head>
+<body>
+
+  <canvas id="particle-canvas"></canvas>
+
+  <header class="nav">
+    <div class="nav-inner">
+      <a href="/" class="logo">
+        <span class="logo-mark">L</span>
+        <span>Lexi</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/#app">Картотека</a>
+        <a href="/review">Повторение</a>
+        <a href="/stats">Статистика</a>
+      </nav>
+      <a href="/#app" class="btn btn-sm btn-ghost">← Назад к картотеке</a>
+    </div>
+  </header>
+
+  <main class="stats-wrap">
+    <h1 class="stats-title">Ваш прогресс</h1>
+
+    <div id="stats-content" hidden>
+      <div class="stats-hero">
+        <div class="stats-big" id="stats-fraction">0 / 0</div>
+        <div class="stats-label">слов выучено</div>
+        <div class="stats-bar-track">
+          <div class="stats-bar-fill" id="stats-bar-fill"></div>
+        </div>
+        <div class="stats-percent" id="stats-percent">0%</div>
+      </div>
+
+      <div class="stats-cards">
+        <div class="stat-card">
+          <div class="stat-card-num" id="stat-total">0</div>
+          <div class="stat-card-label">Всего слов</div>
+        </div>
+        <div class="stat-card stat-card-learned">
+          <div class="stat-card-num" id="stat-learned">0</div>
+          <div class="stat-card-label">Выучено</div>
+        </div>
+        <div class="stat-card stat-card-progress">
+          <div class="stat-card-num" id="stat-not-learned">0</div>
+          <div class="stat-card-label">Ещё учу</div>
+        </div>
+      </div>
+
+      <div class="word-section">
+        <h2>Ещё учу</h2>
+        <div id="not-learned-list" class="word-chip-list"></div>
+      </div>
+
+      <div class="word-section">
+        <h2>Выучено</h2>
+        <div id="learned-list" class="word-chip-list"></div>
+      </div>
+    </div>
+
+    <div id="stats-empty" class="stats-empty" hidden>
+      <div class="empty-text">В картотеке пока нет слов — добавьте первые на главной странице.</div>
+      <a href="/#app" class="btn btn-primary">Добавить слова</a>
+    </div>
+  </main>
+
+  <script src="/static/particles.js"></script>
+  <script src="/static/stats.js"></script>
+</body>
+</html>

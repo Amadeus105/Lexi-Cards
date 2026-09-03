@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lexi — карточки для изучения английского</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <canvas id="particle-canvas"></canvas>
+
+  <header class="nav">
+    <div class="nav-inner">
+      <a href="#top" class="logo">
+        <span class="logo-mark">L</span>
+        <span>Lexi</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#app">Попробовать</a>
+        <a href="#how">Как это работает</a>
+        <a href="#features">Возможности</a>
+        <a href="/review">Повторение</a>
+        <a href="/stats">Статистика</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top">
+      <div class="badge">✦ Работает на бесплатном тарифе Gemini</div>
+      <h1>Учите английские слова<br />быстрее, чем успеваете их забыть</h1>
+      <p class="hero-sub">
+        Впишите любое слово — ИИ сам подберёт перевод, транскрипцию и живой пример.
+        Никаких готовых колод: только те слова, которые нужны именно вам.
+      </p>
+      <div class="hero-cta">
+        <a href="#app" class="btn btn-primary">Добавить первое слово</a>
+        <a href="#how" class="btn btn-ghost">Как это работает</a>
+      </div>
+    </section>
+
+    <section class="app-panel" id="app">
+      <div class="app-panel-inner">
+        <div class="panel-eyebrow">Живое демо</div>
+        <h2 class="panel-title">Ваша картотека</h2>
+
+        <form id="add-form" autocomplete="off">
+          <input id="word-input" type="text" placeholder="например: eager imply nasty" maxlength="500" />
+          <button id="add-btn" type="submit">
+            <span class="btn-label">Добавить</span>
+          </button>
+        </form>
+        <div class="form-hint">Можно вписать сразу несколько слов через пробел или запятую</div>
+        <div id="error" class="error" hidden></div>
+
+        <div id="empty" class="empty" hidden>
+          Пока пусто. Добавьте первое слово — и здесь появится карточка.
+        </div>
+
+        <div id="grid" class="grid"></div>
+      </div>
+    </section>
+
+    <section class="workflow" id="how">
+      <div class="section-head">
+        <div class="eyebrow grad-text">Простой процесс</div>
+        <h2>Три шага до новой карточки</h2>
+      </div>
+      <div class="workflow-grid">
+        <div class="workflow-item">
+          <div class="workflow-num">01</div>
+          <h3>Впишите слово</h3>
+          <p>Любое английское слово или фразу, которая встретилась вам в тексте, фильме или разговоре.</p>
+        </div>
+        <div class="workflow-item">
+          <div class="workflow-num">02</div>
+          <h3>ИИ создаёт карточку</h3>
+          <p>Модель подбирает перевод, транскрипцию, часть речи и естественный пример употребления.</p>
+        </div>
+        <div class="workflow-item">
+          <div class="workflow-num">03</div>
+          <h3>Переворачивайте и учите</h3>
+          <p>Карточка сохраняется в вашей картотеке — переворачивайте её, чтобы проверить себя.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <div class="section-head">
+        <div class="eyebrow grad-text">Почему так</div>
+        <h2>Сделано для тех, кто учит слова по-настоящему</h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔤</div>
+          <h3>Транскрипция IPA</h3>
+          <p>К каждому слову — точная фонетическая запись произношения.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Живые примеры</h3>
+          <p>Не словарная статья, а естественное предложение с переводом.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🏷️</div>
+          <h3>Часть речи</h3>
+          <p>Сразу видно, существительное перед вами, глагол или устойчивое выражение.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🆓</div>
+          <h3>Бесплатно навсегда</h3>
+          <p>Работает на бесплатном тарифе Gemini — без карты и скрытых платежей.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>Своя картотека</h3>
+          <p>Слова хранятся локально в вашей базе и никуда не исчезают.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <h3>Открытый код</h3>
+          <p>FastAPI + чистый JS — меняйте и дополняйте под себя.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <h2>Начните пополнять словарь сегодня</h2>
+      <p>Первая карточка занимает меньше минуты.</p>
+      <a href="#app" class="btn btn-primary btn-lg">Добавить слово →</a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="logo">
+        <span class="logo-mark">L</span>
+        <span>Lexi</span>
+      </div>
+      <p class="footer-note">Личный проект для изучения английского. Сделано с FastAPI и Gemini API.</p>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+  <script src="/static/particles.js"></script>
+</body>
+</html>

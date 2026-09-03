@@ -1,0 +1,54 @@
+.review-wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 60px 24px 100px;
+  text-align: center;
+}
+
+.review-progress {
+  color: var(--text-soft);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.review-card-outer {
+  max-width: 320px;
+  margin: 0 auto 24px;
+}
+.review-card-outer .card-word { font-size: 28px; }
+.review-card-outer .card-face { padding-bottom: 6px; }
+
+.grade-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.grade-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 16px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #05060a;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.grade-btn:active { transform: scale(0.96); }
+.grade-btn:hover { opacity: 0.9; }
+.grade-hard { background: #fbbf24; }
+.grade-easy { background: #60a5fa; }
+
+.review-empty {
+  border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+  padding: 60px 28px;
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.review-empty .empty-actions { margin-top: 20px; }

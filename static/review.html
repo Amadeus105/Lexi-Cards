@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Повторение — Lexi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css" />
+<link rel="stylesheet" href="/static/review.css" />
+</head>
+<body>
+
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <canvas id="particle-canvas"></canvas>
+
+  <header class="nav">
+    <div class="nav-inner">
+      <a href="/" class="logo">
+        <span class="logo-mark">L</span>
+        <span>Lexi</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/#app">Картотека</a>
+        <a href="/review">Повторение</a>
+        <a href="/stats">Статистика</a>
+      </nav>
+      <a href="/#app" class="btn btn-sm btn-ghost">← Назад к картотеке</a>
+    </div>
+  </header>
+
+  <main class="review-wrap">
+    <div id="progress" class="review-progress">Загрузка…</div>
+
+    <div id="review-card-area" hidden></div>
+
+    <div id="review-empty" class="review-empty" hidden>
+      <div class="empty-text"></div>
+      <div class="empty-actions"></div>
+    </div>
+  </main>
+
+  <script src="/static/review.js"></script>
+  <script src="/static/particles.js"></script>
+</body>
+</html>

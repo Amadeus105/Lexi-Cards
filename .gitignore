@@ -1,0 +1,15 @@
+# секреты
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# база данных (генерируется приложением)
+cards.db
+
+# IDE
+.vscode/
+.idea/
