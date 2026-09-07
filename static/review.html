@@ -31,9 +31,27 @@
   </header>
 
   <main class="review-wrap">
-    <div id="progress" class="review-progress">Загрузка…</div>
+    <div id="direction-select" class="direction-select" hidden>
+      <h2 class="direction-title">Что повторяем?</h2>
+      <div class="direction-cards">
+        <button class="direction-card" data-direction="en-ru">
+          <div class="direction-arrow">EN → RU</div>
+          <div class="direction-name">Английский → Русский</div>
+          <div class="direction-desc">Видите слово — вспоминаете перевод</div>
+        </button>
+        <button class="direction-card" data-direction="ru-en">
+          <div class="direction-arrow">RU → EN</div>
+          <div class="direction-name">Русский → Английский</div>
+          <div class="direction-desc">Видите перевод — вспоминаете слово</div>
+        </button>
+      </div>
+    </div>
 
-    <div id="review-card-area" hidden></div>
+    <div id="review-session" hidden>
+      <button id="change-direction-btn" class="change-direction-btn">← Сменить направление</button>
+      <div id="progress" class="review-progress">Загрузка…</div>
+      <div id="review-card-area"></div>
+    </div>
 
     <div id="review-empty" class="review-empty" hidden>
       <div class="empty-text"></div>

@@ -1,4 +1,5 @@
 import sqlite3
+import json
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -20,12 +21,16 @@ def init_db():
                 example_en TEXT,
                 example_ru TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                learned INTEGER DEFAULT 0
+                learned INTEGER DEFAULT 0,
+                synonyms TEXT DEFAULT '[]',
+                antonyms TEXT DEFAULT '[]'
             )
             """
         )
         for ddl in [
             "ALTER TABLE cards ADD COLUMN learned INTEGER DEFAULT 0",
+            "ALTER TABLE cards ADD COLUMN synonyms TEXT DEFAULT '[]'",
+            "ALTER TABLE cards ADD COLUMN antonyms TEXT DEFAULT '[]'",
         ]:
             try:
                 conn.execute(ddl)
@@ -44,12 +49,23 @@ def get_conn():
         conn.close()
 
 
+def _decode_row(row: sqlite3.Row) -> dict:
+    d = dict(row)
+    for field in ("synonyms", "antonyms"):
+        raw = d.get(field)
+        try:
+            d[field] = json.loads(raw) if raw else []
+        except (json.JSONDecodeError, TypeError):
+            d[field] = []
+    return d
+
+
 def list_cards():
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM cards ORDER BY created_at DESC"
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [_decode_row(r) for r in rows]
 
 
 def find_by_word(word: str):
@@ -57,13 +73,13 @@ def find_by_word(word: str):
         row = conn.execute(
             "SELECT * FROM cards WHERE lower(word) = lower(?)", (word,)
         ).fetchone()
-        return dict(row) if row else None
+        return _decode_row(row) if row else None
 
 
 def get_card(card_id: str):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        return dict(row) if row else None
+        return _decode_row(row) if row else None
 
 
 def insert_card(data: dict):
@@ -71,8 +87,11 @@ def insert_card(data: dict):
     with get_conn() as conn:
         conn.execute(
             """
-            INSERT INTO cards (id, word, transcription, part_of_speech, translation, example_en, example_ru)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO cards (
+                id, word, transcription, part_of_speech, translation,
+                example_en, example_ru, synonyms, antonyms
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 card_id,
@@ -82,11 +101,13 @@ def insert_card(data: dict):
                 data["translation"],
                 data.get("example_en", ""),
                 data.get("example_ru", ""),
+                json.dumps(data.get("synonyms", []) or []),
+                json.dumps(data.get("antonyms", []) or []),
             ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        return dict(row)
+        return _decode_row(row)
 
 
 def delete_card(card_id: str):
@@ -103,7 +124,7 @@ def set_learned(card_id: str, learned: bool):
         )
         conn.commit()
         row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        return dict(row) if row else None
+        return _decode_row(row) if row else None
 
 
 def get_stats():

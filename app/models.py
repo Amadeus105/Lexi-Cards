@@ -15,6 +15,8 @@ class CardOut(BaseModel):
     example_ru: str | None = ""
     created_at: str | None = None
     learned: bool = False
+    synonyms: list[str] = []
+    antonyms: list[str] = []
 
 
 class LearnedIn(BaseModel):

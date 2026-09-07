@@ -26,6 +26,20 @@ function highlight(sentence, word) {
   return sentence.replace(new RegExp(`(${escaped})`, "i"), "<b>$1</b>");
 }
 
+function speakWord(word) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(word);
+  utter.lang = "en-US";
+  utter.rate = 0.95;
+  window.speechSynthesis.speak(utter);
+}
+
+function chipList(items) {
+  if (!items || items.length === 0) return "";
+  return items.map((w) => `<span class="mini-chip">${w}</span>`).join("");
+}
+
 function cardTemplate(card) {
   const letter = (card.word || "?").charAt(0).toUpperCase();
   const el = document.createElement("div");
@@ -36,6 +50,7 @@ function cardTemplate(card) {
     <div class="card-inner">
       <div class="card-face">
         <div class="card-tab">${letter}</div>
+        <button class="card-speak" title="Произношение" data-word="${card.word}">🔊</button>
         <div class="card-front-body">
           <div class="card-word">${card.word}</div>
           ${card.transcription ? `<div class="card-transcription">${card.transcription}</div>` : ""}
@@ -49,10 +64,17 @@ function cardTemplate(card) {
           <div class="card-example-label">Пример использования</div>
           <div class="card-example-en">${highlight(card.example_en, card.word)}</div>
           <div class="card-example-ru">${card.example_ru || ""}</div>
+          ${card.synonyms && card.synonyms.length ? `<div class="mini-label">Синонимы</div><div class="mini-chips">${chipList(card.synonyms)}</div>` : ""}
+          ${card.antonyms && card.antonyms.length ? `<div class="mini-label">Антонимы</div><div class="mini-chips">${chipList(card.antonyms)}</div>` : ""}
         </div>
       </div>
     </div>
   `;
+
+  el.querySelector(".card-speak").addEventListener("click", (e) => {
+    e.stopPropagation();
+    speakWord(card.word);
+  });
 
   el.querySelector(".card-inner").addEventListener("click", () => {
     el.querySelector(".card-inner").classList.toggle("flipped");
@@ -107,7 +129,7 @@ form.addEventListener("submit", async (e) => {
   addBtn.disabled = true;
   const errors = [];
   let done = 0;
-  const CONCURRENCY = 5; // не грузим бесплатный тариф Gemini слишком сильно
+  const CONCURRENCY = 5;
 
   addBtn.querySelector(".btn-label").textContent =
     words.length > 1 ? `Генерирую 0 из ${words.length}…` : "Генерирую…";
