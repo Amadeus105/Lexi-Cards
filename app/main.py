@@ -195,6 +195,12 @@ def stats_page(request: Request):
     return _page(request, "stats.html")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    # Некоторые браузеры и сервисы просят значок по старому адресу.
+    return FileResponse(STATIC / "icons" / "favicon-32.png", media_type="image/png")
+
+
 @app.get("/login")
 def login_page(request: Request):
     if auth.user_from_request(request):

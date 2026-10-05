@@ -2,14 +2,15 @@
 
 Куда переносить, решает DATABASE_URL (как и для сервера):
     локально:  python -m app.migrate --admin aidyn
-    в Neon:    DATABASE_URL="postgresql://..." python -m app.migrate --admin aidyn
+    в Neon:    $env:DATABASE_URL="postgresql://..."; python -m app.migrate --admin aidyn
 
 Пароль спрашивается в терминале. Если аккаунт уже есть, он просто получает права
 администратора, а пароль не меняется. Повторный запуск безопасен: уже перенесённые
-карточки пропускаются.
+карточки и повторения пропускаются, так что прерванный перенос можно просто запустить снова.
 """
 import argparse
 import getpass
+import json
 import sqlite3
 import sys
 from pathlib import Path
@@ -20,6 +21,7 @@ load_dotenv()
 from . import auth, database  # noqa: E402
 
 LEGACY_DB = Path(__file__).parent.parent / "cards.db"
+SRS_FIELDS = (("ease_factor", 2.5), ("interval_days", 0), ("repetitions", 0), ("due_at", None))
 
 
 def get_or_create_admin(username: str) -> dict:
@@ -39,27 +41,38 @@ def get_or_create_admin(username: str) -> dict:
     return user
 
 
+def _json_list(raw) -> str:
+    try:
+        value = json.loads(raw) if raw else []
+    except (json.JSONDecodeError, TypeError):
+        value = []
+    return json.dumps(value if isinstance(value, list) else [], ensure_ascii=False)
+
+
 def migrate(legacy: Path, username: str):
     if not legacy.exists():
         sys.exit(f"Старая база не найдена: {legacy}")
+    print(f"База: {database.engine.url.render_as_string(hide_password=True)}")
+    print("Подключаюсь и создаю таблицы…", flush=True)
     database.init_db()
     user = get_or_create_admin(username)
 
     src = sqlite3.connect(legacy)
     src.row_factory = sqlite3.Row
     columns = {r[1] for r in src.execute("PRAGMA table_info(cards)")}
-    moved = skipped = 0
-    for row in src.execute("SELECT * FROM cards"):
-        r = dict(row)
-        extra = {"id": r["id"], "created_at": r.get("created_at") or None}
-        for field, default in (("learned", 0), ("ease_factor", 2.5), ("interval_days", 0),
-                               ("repetitions", 0), ("due_at", None)):
-            if field in columns:
-                extra[field] = r[field] if r[field] is not None else default
-        extra["learned"] = bool(extra.get("learned"))
-        if not extra["created_at"]:
-            extra.pop("created_at")
-        data = {
+
+    # --- карточки: читаем, что уже есть, и отправляем недостающие одной пачкой ---
+    have_ids, have_words = database.existing_card_keys(user["id"])
+    print(f"Уже в базе: {len(have_ids)} карточек.", flush=True)
+    new_rows, skipped = [], 0
+    for r in map(dict, src.execute("SELECT * FROM cards")):
+        if r["id"] in have_ids or r["word"].lower() in have_words:
+            skipped += 1
+            continue
+        have_words.add(r["word"].lower())
+        row = {
+            "id": r["id"],
+            "user_id": user["id"],
             "word": r["word"],
             "transcription": r.get("transcription") or "",
             "part_of_speech": r.get("part_of_speech") or "",
@@ -68,39 +81,32 @@ def migrate(legacy: Path, username: str):
             "example_ru": r.get("example_ru") or "",
             "synonyms": _json_list(r.get("synonyms")),
             "antonyms": _json_list(r.get("antonyms")),
+            "created_at": r.get("created_at") or database._timestamp(),
+            "learned": bool(r.get("learned")),
         }
-        try:
-            database.insert_card(user["id"], data, **extra)
-            moved += 1
-        except database.DuplicateError:
-            skipped += 1
-        except Exception as e:  # тот же id уже перенесён ранее
-            if "unique" in str(e).lower() or "duplicate" in str(e).lower():
-                skipped += 1
-            else:
-                raise
+        for field, default in SRS_FIELDS:
+            value = r.get(field) if field in columns else None
+            row[field] = default if value is None else value
+        new_rows.append(row)
+    print(f"Переношу {len(new_rows)} карточек…", flush=True)
+    database.bulk_insert("cards", new_rows)
 
-    reviews_moved = 0
-    has_reviews = src.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='reviews'"
-    ).fetchone()
-    if has_reviews and moved:
-        for row in src.execute("SELECT card_id, grade, reviewed_at FROM reviews"):
-            database.add_review_record(user["id"], row["card_id"], row["grade"], row["reviewed_at"])
-            reviews_moved += 1
+    # --- история повторений: только те записи, которых ещё нет ---
+    moved_reviews = 0
+    if src.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='reviews'").fetchone():
+        have_reviews = database.existing_review_keys(user["id"])
+        review_rows = [
+            {"user_id": user["id"], "card_id": r["card_id"], "grade": r["grade"], "reviewed_at": r["reviewed_at"]}
+            for r in src.execute("SELECT card_id, grade, reviewed_at FROM reviews")
+            if (r["card_id"], r["reviewed_at"]) not in have_reviews
+        ]
+        database.bulk_insert("reviews", review_rows)
+        moved_reviews = len(review_rows)
     src.close()
 
-    print(f"Перенесено карточек: {moved}, пропущено (уже были): {skipped}, повторений: {reviews_moved}.")
-    print(f"База: {database.engine.url.render_as_string(hide_password=True)}")
-
-
-def _json_list(raw):
-    import json
-    try:
-        value = json.loads(raw) if raw else []
-        return value if isinstance(value, list) else []
-    except (json.JSONDecodeError, TypeError):
-        return []
+    total = len(database.existing_card_keys(user["id"])[0])
+    print(f"Перенесено карточек: {len(new_rows)}, пропущено (уже были): {skipped}, повторений: {moved_reviews}.")
+    print(f"Теперь у «{user['username']}» в базе {total} карточек.")
 
 
 if __name__ == "__main__":

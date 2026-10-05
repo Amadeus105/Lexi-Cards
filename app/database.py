@@ -296,6 +296,30 @@ def add_review_record(user_id: int, card_id: str, grade: str, reviewed_at: str):
         ))
 
 
+# ---------- перенос из старой базы (пачками, чтобы не ходить в Neon по разу на карточку) ----------
+
+def existing_card_keys(user_id: int):
+    """Id и слова (в нижнем регистре), которые у пользователя уже есть."""
+    with engine.connect() as conn:
+        rows = conn.execute(select(cards.c.id, cards.c.word).where(cards.c.user_id == user_id)).all()
+    return {r.id for r in rows}, {r.word.lower() for r in rows}
+
+
+def existing_review_keys(user_id: int):
+    with engine.connect() as conn:
+        rows = conn.execute(
+            select(reviews.c.card_id, reviews.c.reviewed_at).where(reviews.c.user_id == user_id)
+        ).all()
+    return {(r.card_id, r.reviewed_at) for r in rows}
+
+
+def bulk_insert(table_name: str, rows: list[dict]):
+    """Одна транзакция на всю пачку: либо все строки, либо ни одной."""
+    if rows:
+        with engine.begin() as conn:
+            conn.execute(insert(metadata.tables[table_name]), rows)
+
+
 # ---------- статистика ----------
 
 def _local_date(iso_utc: str, tz):
