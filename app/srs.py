@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 MIN_EASE = 1.3
+GRADES = ("again", "hard", "good", "easy")
 
 
 def grade_card(grade: str, ease_factor: float, interval_days: float, repetitions: int) -> dict:
@@ -12,7 +13,7 @@ def grade_card(grade: str, ease_factor: float, interval_days: float, repetitions
     ease_factor = ease_factor or 2.5
     interval_days = interval_days or 0
     repetitions = repetitions or 0
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     if grade == "again":
         repetitions = 0
@@ -49,5 +50,5 @@ def grade_card(grade: str, ease_factor: float, interval_days: float, repetitions
         "ease_factor": round(ease_factor, 2),
         "interval_days": round(interval_days, 2),
         "repetitions": repetitions,
-        "due_at": due_at.isoformat(),
+        "due_at": due_at.isoformat(timespec="seconds"),
     }

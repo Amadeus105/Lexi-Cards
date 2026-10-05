@@ -1,0 +1,392 @@
+/* Тема «Неон»: тёмное стекло, неоновое свечение, градиенты.
+   Включается атрибутом <html data-theme="neon">; разметка та же, что у «Бумаги». */
+[data-theme="neon"] {
+  --ink: #04050d;
+  --drawer: rgba(255, 255, 255, 0.035);
+  --drawer-2: rgba(255, 255, 255, 0.06);
+  --drawer-edge: rgba(255, 255, 255, 0.12);
+  --paper: #0d1124;
+  --paper-shade: rgba(129, 140, 248, 0.25);
+  --rule-blue: rgba(34, 211, 238, 0.13);
+  --rule-red: #ec4899;
+  --pencil: #22d3ee;
+  --pencil-deep: #6366f1;
+
+  --text: #f5f6fb;
+  --text-soft: #a0a7ba;
+  --text-faint: #646b80;
+  --paper-text: #eef0ff;
+  --paper-soft: #9aa3c7;
+
+  --ok: #34d399;
+  --danger: #f87171;
+
+  --serif: "Unbounded", "Onest", sans-serif;
+  --neon-1: #6366f1;
+  --neon-2: #22d3ee;
+  --neon-3: #ec4899;
+
+  color-scheme: dark;
+}
+
+/* ---------- фон: медленное северное сияние ---------- */
+[data-theme="neon"] body {
+  background: var(--ink);
+  position: relative;
+  min-height: 100vh;
+}
+[data-theme="neon"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* три пятна света плывут каждое своим путём */
+  background:
+    radial-gradient(closest-side, rgba(99, 102, 241, 0.55), transparent) 0 0 / 60vmax 60vmax no-repeat,
+    radial-gradient(closest-side, rgba(34, 211, 238, 0.32), transparent) 0 0 / 50vmax 50vmax no-repeat,
+    radial-gradient(closest-side, rgba(236, 72, 153, 0.30), transparent) 0 0 / 48vmax 48vmax no-repeat;
+  filter: blur(40px);
+  animation: neon-aurora 24s ease-in-out infinite alternate;
+}
+[data-theme="neon"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 30%, transparent 100%);
+}
+@keyframes neon-aurora {
+  0%   { background-position: 10% -20%, 105% 25%, -10% 110%; }
+  33%  { background-position: 45% -10%, 80% 60%, 15% 85%; }
+  66%  { background-position: 20% 15%, 110% 5%, -5% 60%; }
+  100% { background-position: 60% -25%, 70% 40%, 30% 115%; }
+}
+
+/* холст с падающими символами — его рисует particles.js */
+#particle-canvas { display: none; }
+[data-theme="neon"] #particle-canvas {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+[data-theme="neon"] :focus-visible { outline-color: var(--neon-2); }
+
+/* ---------- шапка ---------- */
+[data-theme="neon"] .top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(4, 5, 13, 0.6);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom-color: var(--drawer-edge);
+}
+[data-theme="neon"] .logo { font-weight: 700; font-size: 19px; }
+[data-theme="neon"] .logo-card {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: conic-gradient(from 200deg, var(--neon-1), var(--neon-2), var(--neon-3), var(--neon-1));
+  box-shadow: 0 0 18px -3px rgba(99, 102, 241, 0.9);
+  transform: none;
+}
+[data-theme="neon"] .nav-links a[aria-current="page"] {
+  border-bottom-color: var(--neon-2);
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+}
+
+/* ---------- кнопки ---------- */
+[data-theme="neon"] .btn-pencil {
+  background: linear-gradient(135deg, #7c7ff7, var(--neon-1) 45%, #4338ca);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.5), 0 10px 30px -10px rgba(99, 102, 241, 0.9);
+}
+[data-theme="neon"] .btn-pencil:hover {
+  background: linear-gradient(135deg, #8b8ef9, #7173f3 45%, #4f46e5);
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.7), 0 14px 40px -10px rgba(99, 102, 241, 1);
+}
+[data-theme="neon"] .btn-pencil:disabled {
+  background: linear-gradient(90deg, rgba(99,102,241,0.25), rgba(34,211,238,0.25), rgba(99,102,241,0.25));
+  background-size: 200% 100%;
+  animation: neon-loading 1.2s linear infinite;
+  color: var(--text-soft);
+  box-shadow: none;
+}
+@keyframes neon-loading { to { background-position: -200% 0; } }
+[data-theme="neon"] .btn-quiet { backdrop-filter: blur(6px); }
+[data-theme="neon"] .theme-toggle[aria-pressed="true"] {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: var(--neon-2);
+  box-shadow: 0 0 14px -4px var(--neon-2);
+}
+
+/* ---------- заголовки ---------- */
+[data-theme="neon"] .intake h1,
+[data-theme="neon"] .review-title,
+[data-theme="neon"] .stats-title {
+  font-weight: 700;
+  font-size: 46px;
+  letter-spacing: -0.03em;
+  background: linear-gradient(90deg, #fff 30%, #a5b4fc 60%, var(--neon-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- поле ввода ---------- */
+[data-theme="neon"] #word-input {
+  background: rgba(10, 13, 28, 0.9);
+  border-color: var(--drawer-edge);
+  color: var(--text);
+  font-family: var(--sans);
+}
+[data-theme="neon"] #word-input:focus {
+  border-color: rgba(129, 140, 248, 0.8);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 30px -8px rgba(99, 102, 241, 0.8);
+}
+[data-theme="neon"] #word-input::placeholder { color: var(--text-faint); }
+
+/* ---------- ящик и вкладки ---------- */
+[data-theme="neon"] .drawer-body {
+  border: 1px solid var(--drawer-edge);
+  border-radius: 22px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 40px 100px -40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+[data-theme="neon"] .letter-tabs { padding: 0 20px; }
+[data-theme="neon"] .letter-tab { font-family: var(--sans); font-weight: 700; }
+[data-theme="neon"] .letter-tab[aria-selected="true"] {
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+  box-shadow: inset 0 2px 0 var(--neon-2), 0 -6px 18px -8px var(--neon-2);
+}
+[data-theme="neon"] #search-input,
+[data-theme="neon"] .sort-select { background: rgba(255, 255, 255, 0.03); }
+[data-theme="neon"] .sort-select option { background: #0a0d1c; }
+[data-theme="neon"] .filter-chip[aria-pressed="true"],
+[data-theme="neon"] .scope-btn[aria-pressed="true"] {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(129, 140, 248, 0.6);
+  color: #fff;
+}
+[data-theme="neon"] .scope-btn[aria-pressed="true"] span { color: #c7d2fe; }
+
+/* ---------- карточки: тёмное стекло с неоновой кромкой ---------- */
+[data-theme="neon"] .index-card { --pos-ink: #94a3b8; --pos-2: #64748b; }
+[data-theme="neon"] .index-card[data-pos="noun"],
+[data-theme="neon"] .type-card[data-pos="noun"]      { --pos-ink: #818cf8; --pos-2: #6366f1; }
+[data-theme="neon"] .index-card[data-pos="verb"],
+[data-theme="neon"] .type-card[data-pos="verb"]      { --pos-ink: #22d3ee; --pos-2: #3b82f6; }
+[data-theme="neon"] .index-card[data-pos="adjective"],
+[data-theme="neon"] .type-card[data-pos="adjective"] { --pos-ink: #f472b6; --pos-2: #a855f7; }
+[data-theme="neon"] .index-card[data-pos="adverb"],
+[data-theme="neon"] .type-card[data-pos="adverb"]    { --pos-ink: #fbbf24; --pos-2: #f97316; }
+[data-theme="neon"] .index-card[data-pos="phrase"],
+[data-theme="neon"] .type-card[data-pos="phrase"]    { --pos-ink: #34d399; --pos-2: #14b8a6; }
+
+[data-theme="neon"] .card-face {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--pos-ink) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(20, 24, 44, 0.96), rgba(10, 12, 26, 0.96));
+  box-shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.9);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+[data-theme="neon"] .card-inner { border-radius: 16px; }
+[data-theme="neon"] .index-card:hover .card-face {
+  border-color: color-mix(in srgb, var(--pos-ink) 60%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pos-ink) 30%, transparent),
+    0 18px 50px -18px color-mix(in srgb, var(--pos-ink) 70%, transparent);
+}
+[data-theme="neon"] .card-head {
+  border-bottom: 1px solid color-mix(in srgb, var(--pos-ink) 45%, transparent);
+}
+[data-theme="neon"] .card-word {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+[data-theme="neon"] .review-card .card-word { font-size: 32px; }
+[data-theme="neon"] .type-card .card-word { font-size: 30px; }
+[data-theme="neon"] .card-translation {
+  font-family: var(--sans);
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--pos-ink), var(--pos-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+[data-theme="neon"] .card-transcription { font-family: var(--sans); }
+[data-theme="neon"] .card-pos {
+  border: none;
+  border-radius: 999px;
+  padding: 1px 9px;
+  background: color-mix(in srgb, var(--pos-ink) 16%, transparent);
+  transform: none;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--pos-ink) 70%, transparent);
+}
+[data-theme="neon"] .card-example-en b {
+  color: var(--pos-ink);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--pos-ink) 60%, transparent);
+}
+[data-theme="neon"] .card-related span { color: var(--text); }
+[data-theme="neon"] .card-action {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-soft);
+}
+[data-theme="neon"] .card-speak:hover { color: #fff; }
+[data-theme="neon"] .card-delete:hover { color: var(--danger); }
+
+/* сигнал «пора повторить» — светящаяся точка */
+[data-theme="neon"] .index-card.is-due::before {
+  top: 10px;
+  left: auto;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 10px #fbbf24, 0 0 2px #fbbf24;
+  animation: neon-pulse 2.4s ease-in-out infinite;
+}
+[data-theme="neon"] .index-card.is-due .card-pos { margin-right: 14px; }
+@keyframes neon-pulse { 50% { opacity: 0.45; } }
+
+/* ---------- повторение ---------- */
+[data-theme="neon"] .mode-option,
+[data-theme="neon"] .count-option {
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+[data-theme="neon"] .mode-option:hover,
+[data-theme="neon"] .count-option:hover {
+  border-color: rgba(129, 140, 248, 0.7);
+  box-shadow: 0 16px 40px -18px rgba(99, 102, 241, 0.9);
+  transform: translateY(-2px);
+}
+[data-theme="neon"] .mode-name { font-size: 16px; }
+[data-theme="neon"] .count-option b {
+  background: linear-gradient(90deg, var(--neon-2), var(--neon-1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+[data-theme="neon"] .progress-fill {
+  background: linear-gradient(90deg, var(--neon-1), var(--neon-2), #34d399);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.7);
+}
+[data-theme="neon"] .grade-btn {
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+}
+[data-theme="neon"] .grade-btn:hover {
+  background: color-mix(in srgb, var(--c) 20%, transparent);
+  box-shadow: 0 10px 26px -12px var(--c);
+}
+[data-theme="neon"] .grade-label { color: var(--c); }
+[data-theme="neon"] .grade-hard { --c: #fbbf24; }
+[data-theme="neon"] .grade-easy { --c: #60a5fa; }
+
+[data-theme="neon"] .type-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(20, 24, 44, 0.96), rgba(10, 12, 26, 0.96));
+}
+[data-theme="neon"] .type-card.is-correct {
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.3), 0 20px 60px -20px rgba(52, 211, 153, 0.5);
+}
+[data-theme="neon"] .type-row input {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--drawer-edge);
+  color: var(--text);
+  font-family: var(--sans);
+}
+[data-theme="neon"] .type-row input:focus { border-color: var(--neon-1); }
+[data-theme="neon"] .type-feedback.is-correct { color: #34d399; }
+[data-theme="neon"] .type-feedback.is-incorrect { color: #f87171; }
+[data-theme="neon"] .type-actions .btn-quiet { color: var(--text); border-color: var(--drawer-edge); }
+[data-theme="neon"] .type-actions .btn-quiet:hover { background: rgba(255, 255, 255, 0.06); }
+
+[data-theme="neon"] .done-card {
+  border: 1px solid var(--drawer-edge);
+  border-radius: 22px;
+  background:
+    radial-gradient(60% 100% at 50% 0%, rgba(99, 102, 241, 0.25), transparent 70%),
+    linear-gradient(180deg, rgba(20, 24, 44, 0.96), rgba(10, 12, 26, 0.96));
+}
+[data-theme="neon"] .done-title { border-bottom-color: rgba(129, 140, 248, 0.4); }
+[data-theme="neon"] .done-stamp {
+  border: 2px solid var(--neon-2);
+  border-radius: 999px;
+  color: var(--neon-2);
+  font-family: var(--sans);
+  font-size: 16px;
+  text-shadow: 0 0 10px var(--neon-2);
+  box-shadow: 0 0 18px -4px var(--neon-2), inset 0 0 12px -6px var(--neon-2);
+  transform: rotate(-6deg);
+}
+[data-theme="neon"] .done-tally .grade-hard { --c: #fbbf24; }
+[data-theme="neon"] .done-tally .grade-good { --c: #34d399; }
+[data-theme="neon"] .done-tally .grade-easy { --c: #60a5fa; }
+[data-theme="neon"] .done-tally .grade-again { --c: #f87171; }
+[data-theme="neon"] .done-tally dd { color: var(--c); }
+
+/* ---------- статистика ---------- */
+[data-theme="neon"] .box-well {
+  border: 1px solid var(--drawer-edge);
+  border-radius: 16px;
+}
+[data-theme="neon"] .box-well::after {
+  background: rgba(10, 13, 28, 0.85);
+  backdrop-filter: blur(4px);
+}
+[data-theme="neon"] .stack i {
+  height: 6px;
+  margin-top: 2px;
+  border: none;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--neon-1), var(--neon-2));
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+}
+[data-theme="neon"] .box-count {
+  background: linear-gradient(90deg, var(--neon-2), var(--neon-1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+[data-theme="neon"] .l0 { background: rgba(255, 255, 255, 0.05); }
+[data-theme="neon"] .l1 { background: rgba(99, 102, 241, 0.35); }
+[data-theme="neon"] .l2 { background: rgba(99, 102, 241, 0.6); }
+[data-theme="neon"] .l3 { background: #818cf8; }
+[data-theme="neon"] .l4 { background: #22d3ee; box-shadow: 0 0 8px rgba(34, 211, 238, 0.6); }
+
+[data-theme="neon"] .word-sheet {
+  border: 1px solid var(--drawer-edge);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+}
+[data-theme="neon"] .word-sheet h2 { border-bottom-color: rgba(129, 140, 248, 0.35); font-size: 17px; }
+[data-theme="neon"] .word-list b { font-family: var(--sans); color: #fff; }
+
+@media (max-width: 720px) {
+  [data-theme="neon"] .intake h1,
+  [data-theme="neon"] .review-title,
+  [data-theme="neon"] .stats-title { font-size: 32px; }
+}

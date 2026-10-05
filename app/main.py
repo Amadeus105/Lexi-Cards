@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -5,17 +6,29 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from . import database
-from .models import WordIn, CardOut, LearnedIn, StatsOut
+from .models import WordIn, CardOut, LearnedIn, ReviewIn, StatsOut
 from .llm import generate_card, LLMError
+from .export import build_workbook
 
 BASE_DIR = Path(__file__).parent.parent
 
 app = FastAPI(title="Картотека слов")
 
 database.init_db()
+database.backup_db()
+
+
+@app.middleware("http")
+async def no_stale_assets(request, call_next):
+    # Браузер всегда сверяется с сервером (ETag → 304), поэтому после
+    # обновления CSS/JS не показывает старую версию страницы.
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/api/cards", response_model=list[CardOut])
@@ -38,6 +51,10 @@ async def add_card(payload: WordIn):
     except LLMError as e:
         raise HTTPException(502, str(e))
 
+    # Модель может нормализовать слово ("Running" -> "run") — проверяем ещё раз.
+    if database.find_by_word(generated.get("word", "")):
+        raise HTTPException(409, f"Слово «{generated['word']}» уже есть в картотеке")
+
     card = database.insert_card(generated)
     return card
 
@@ -57,9 +74,29 @@ def update_learned(card_id: str, payload: LearnedIn):
     return updated
 
 
+@app.post("/api/cards/{card_id}/review", response_model=CardOut)
+def review(card_id: str, payload: ReviewIn):
+    card = database.review_card(card_id, payload.grade)
+    if not card:
+        raise HTTPException(404, "Карточка не найдена")
+    return card
+
+
 @app.get("/api/stats", response_model=StatsOut)
 def stats():
     return database.get_stats()
+
+
+@app.get("/api/export/xlsx")
+def export_xlsx():
+    cards = database.list_cards()
+    buffer = build_workbook(cards)
+    filename = f"lexi-words-{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")

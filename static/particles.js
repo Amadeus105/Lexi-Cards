@@ -1,14 +1,24 @@
+// «Живой» фон неоновой темы: падающие символы, световые лучи и связи с курсором.
+// Работает только при <html data-theme="neon">; в «Бумаге» полностью остановлен.
 (function () {
-  const canvas = document.getElementById("particle-canvas");
-  if (!canvas) return;
+  const root = document.documentElement;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const canvas = document.createElement("canvas");
+  canvas.id = "particle-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  document.body.prepend(canvas);
   const ctx = canvas.getContext("2d");
 
-  let width, height;
-  let nodes = [];
-  let beams = [];
-  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*()".split("");
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
   const mouse = { x: -1000, y: -1000 };
   const ACCENT = "99, 102, 241";
+  const CYAN = "34, 211, 238";
+
+  let width = 0, height = 0;
+  let nodes = [];
+  let beams = [];
+  let frame = null;
 
   function resize() {
     width = canvas.clientWidth;
@@ -16,42 +26,26 @@
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
     canvas.height = height * dpr;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   function initParticles() {
     const nodeCount = Math.max(40, Math.round((width * height) / 22000));
-    nodes = Array.from({ length: nodeCount }).map(() => ({
+    nodes = Array.from({ length: nodeCount }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
       vy: Math.random() * 0.35 + 0.08,
       char: chars[Math.floor(Math.random() * chars.length)],
     }));
-    beams = Array.from({ length: 16 }).map(() => ({
+    beams = Array.from({ length: 16 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
       length: Math.random() * 100 + 50,
       speed: Math.random() * 4 + 2,
       opacity: Math.random() * 0.35 + 0.2,
+      color: Math.random() > 0.5 ? ACCENT : CYAN,
     }));
   }
-
-  window.addEventListener("resize", () => {
-    resize();
-    initParticles();
-  });
-  window.addEventListener("mousemove", (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-  });
-  window.addEventListener("mouseleave", () => {
-    mouse.x = -1000;
-    mouse.y = -1000;
-  });
-
-  resize();
-  initParticles();
 
   function draw() {
     ctx.clearRect(0, 0, width, height);
@@ -63,7 +57,7 @@
         b.x = Math.random() * width;
       }
       const g = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.length);
-      g.addColorStop(0, `rgba(${ACCENT}, ${b.opacity})`);
+      g.addColorStop(0, `rgba(${b.color}, ${b.opacity})`);
       g.addColorStop(1, "transparent");
       ctx.strokeStyle = g;
       ctx.lineWidth = 1.2;
@@ -117,7 +111,48 @@
       ctx.fillText(n.char, n.x, n.y);
     });
 
-    requestAnimationFrame(draw);
+    frame = requestAnimationFrame(draw);
   }
-  draw();
+
+  function isNeon() {
+    return root.dataset.theme === "neon";
+  }
+
+  function start() {
+    if (frame || reducedMotion || document.hidden || !isNeon()) return;
+    resize();
+    if (nodes.length === 0) initParticles();
+    frame = requestAnimationFrame(draw);
+  }
+
+  function stop() {
+    if (frame) cancelAnimationFrame(frame);
+    frame = null;
+    ctx.clearRect(0, 0, width, height);
+  }
+
+  function sync() {
+    if (isNeon()) start();
+    else stop();
+  }
+
+  window.addEventListener("resize", () => {
+    if (!isNeon()) return;
+    resize();
+    initParticles();
+  });
+  window.addEventListener("mousemove", (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+  document.addEventListener("mouseleave", () => {
+    mouse.x = -1000;
+    mouse.y = -1000;
+  });
+  // Во фоновой вкладке не тратим процессор.
+  document.addEventListener("visibilitychange", () => (document.hidden ? stop() : sync()));
+  // Переключатель темы меняет атрибут — следим за ним.
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+
+  sync();
 })();

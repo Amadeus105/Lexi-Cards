@@ -1,130 +1,191 @@
 .stats-wrap {
-  position: relative;
-  z-index: 1;
-  max-width: 780px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 60px 24px 100px;
+  padding: 48px 24px 80px;
 }
 
 .stats-title {
-  font-size: 28px;
-  font-weight: 800;
-  text-align: center;
-  margin: 0 0 32px;
-}
-
-.stats-hero {
-  text-align: center;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
-  border: 1px solid var(--border-strong);
-  border-radius: 20px;
-  padding: 40px 24px;
-  margin-bottom: 24px;
-}
-
-.stats-big {
+  font-family: var(--serif);
   font-size: 44px;
-  font-weight: 800;
-  background: linear-gradient(90deg, var(--accent-2), var(--accent-1));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  line-height: 1.1;
+  font-weight: 600;
+  font-variation-settings: "opsz" 72;
+  margin: 0 0 12px;
+}
+.stats-lead {
+  max-width: 60ch;
+  font-size: 18px;
+  color: var(--text-soft);
 }
 
-.stats-label {
-  color: var(--text-soft);
-  font-size: 14px;
+.stats-section { margin-top: 48px; }
+.stats-section h2 {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.section-note {
+  max-width: 62ch;
+  font-size: 15px;
+  color: var(--text-faint);
   margin-bottom: 20px;
 }
 
-.stats-bar-track {
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
+/* ---------- коробки Лейтнера ---------- */
+.boxes {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+.box { margin: 0; }
+.box-well {
+  position: relative;
+  height: 170px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 6px 6px 4px 4px;
+  background: var(--drawer);
+  box-shadow: inset 0 10px 18px -12px rgba(0, 0, 0, 0.7);
   overflow: hidden;
 }
-.stats-bar-fill {
-  height: 100%;
-  width: 0%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
-  transition: width 0.6s ease;
+/* передняя стенка коробки закрывает низ стопки */
+.box-well::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 24px;
+  background: var(--drawer-2);
+  border-top: 1px solid var(--drawer-edge);
 }
-
-.stats-percent {
-  color: var(--text-soft);
-  font-size: 13px;
-}
-
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 40px;
-}
-.stat-card {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 22px 16px;
-  text-align: center;
-}
-.stat-card-num {
-  font-size: 26px;
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-.stat-card-label {
-  color: var(--text-soft);
-  font-size: 12.5px;
-}
-.stat-card-learned .stat-card-num { color: #34d399; }
-.stat-card-progress .stat-card-num { color: #fbbf24; }
-
-.word-section { margin-bottom: 32px; }
-.word-section h2 {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-soft);
-  margin: 0 0 12px;
-}
-
-.word-chip-list {
+.stack {
+  width: 100%;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column-reverse;
+  margin-bottom: 20px;
 }
-.word-chip {
+.stack i {
+  display: block;
+  height: 7px;
+  margin-top: 1px;
+  border-radius: 1px;
+  background: var(--paper);
+  border-top: 1.5px solid var(--rule-red);
+}
+.stack i:nth-child(3n + 1) { transform: translateX(-3px); }
+.stack i:nth-child(3n + 2) { transform: translateX(2px); }
+.box figcaption {
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px;
+}
+.box-count {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.box-label { font-weight: 600; }
+.box-note { font-size: 13px; color: var(--text-faint); }
+
+/* ---------- тепловая карта ---------- */
+.heatmap-scroll { overflow-x: auto; padding-bottom: 4px; }
+.heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 13px);
+  grid-auto-flow: column;
+  grid-auto-columns: 13px;
+  gap: 4px;
+  width: max-content;
+}
+.heatmap i, .heatmap-legend i {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
+}
+.heatmap i.is-today { outline: 1.5px solid var(--text); outline-offset: 1px; }
+.l0 { background: var(--drawer); }
+.l1 { background: #5b5434; }
+.l2 { background: #8f7a37; }
+.l3 { background: #c7a03f; }
+.l4 { background: var(--pencil); }
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
   font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: rgba(255,255,255,0.03);
-  color: var(--text-soft);
-}
-.word-chip.is-learned {
-  color: #34d399;
-  border-color: rgba(52,211,153,0.35);
-  background: rgba(52,211,153,0.08);
-}
-.word-chip-empty {
   color: var(--text-faint);
-  font-size: 13px;
 }
+.heatmap-legend i { width: 11px; height: 11px; }
 
-.stats-empty {
-  border: 1px dashed var(--border-strong);
-  border-radius: 16px;
-  padding: 60px 28px;
-  text-align: center;
-  color: var(--text-soft);
+/* ---------- списки слов на линованных листах ---------- */
+.word-sheets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.word-sheet {
+  --line: 28px;
+  border-radius: var(--r-card);
+  background: var(--paper);
+  color: var(--paper-text);
+  overflow: hidden;
+}
+.word-sheet h2 {
+  margin: 0;
+  padding: 14px 18px 8px;
+  border-bottom: 1.5px solid var(--rule-red);
+  font-size: 20px;
+}
+.word-sheet h2 span {
+  font-family: var(--sans);
   font-size: 15px;
+  font-weight: 500;
+  color: var(--paper-soft);
+  margin-left: 4px;
 }
-.stats-empty .btn { margin-top: 20px; }
+.word-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 18px;
+  max-height: calc(var(--line) * 14);
+  overflow-y: auto;
+  line-height: var(--line);
+  font-size: 15px;
+  background: repeating-linear-gradient(
+    transparent 0 calc(var(--line) - 1px),
+    var(--rule-blue) calc(var(--line) - 1px) var(--line)
+  );
+  background-attachment: local;
+  scrollbar-width: thin;
+}
+.word-list li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.word-list b { font-family: var(--serif); font-weight: 600; }
+.word-list span { color: var(--paper-soft); }
+.word-list-empty { color: var(--paper-soft); font-style: italic; }
 
-@media (max-width: 560px) {
-  .stats-cards { grid-template-columns: 1fr; }
+.stats-export { margin-top: 28px; font-size: 15px; }
+.stats-export a { color: var(--text-soft); }
+
+.stats-empty { color: var(--text-soft); font-size: 17px; }
+.stats-empty .btn { margin-top: 18px; }
+
+@media (max-width: 760px) {
+  .stats-wrap { padding: 32px 16px 60px; }
+  .stats-title { font-size: 34px; }
+  .stats-lead { font-size: 16px; }
+  .boxes { grid-template-columns: repeat(3, 1fr); }
+  .box-well { height: 120px; }
+  .word-sheets { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .boxes { grid-template-columns: repeat(2, 1fr); }
 }

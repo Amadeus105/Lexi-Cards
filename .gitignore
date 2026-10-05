@@ -13,3 +13,8 @@ cards.db
 # IDE
 .vscode/
 .idea/
+# резервные копии базы (создаются при каждом запуске)
+backups/
+
+# скиллы Claude Code (установлены локально)
+.claude/skills/

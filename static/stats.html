@@ -5,75 +5,72 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Статистика — Lexi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400&family=Onest:wght@400;500;600&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css" />
 <link rel="stylesheet" href="/static/stats.css" />
+<link rel="stylesheet" href="/static/neon.css" />
+<script>try{if(localStorage.getItem("lexi-theme")==="neon")document.documentElement.dataset.theme="neon"}catch(e){}</script>
 </head>
 <body>
 
-  <canvas id="particle-canvas"></canvas>
-
-  <header class="nav">
-    <div class="nav-inner">
-      <a href="/" class="logo">
-        <span class="logo-mark">L</span>
-        <span>Lexi</span>
-      </a>
+  <header class="top">
+    <div class="top-inner">
+      <a href="/" class="logo"><span class="logo-card" aria-hidden="true"></span>Lexi</a>
       <nav class="nav-links">
-        <a href="/#app">Картотека</a>
+        <a href="/">Картотека</a>
         <a href="/review">Повторение</a>
         <a href="/stats">Статистика</a>
       </nav>
-      <a href="/#app" class="btn btn-sm btn-ghost">← Назад к картотеке</a>
+      <a href="/review" class="btn btn-pencil btn-sm" id="nav-due" hidden></a>
     </div>
   </header>
 
   <main class="stats-wrap">
-    <h1 class="stats-title">Ваш прогресс</h1>
+    <h1 class="stats-title">Статистика</h1>
 
     <div id="stats-content" hidden>
-      <div class="stats-hero">
-        <div class="stats-big" id="stats-fraction">0 / 0</div>
-        <div class="stats-label">слов выучено</div>
-        <div class="stats-bar-track">
-          <div class="stats-bar-fill" id="stats-bar-fill"></div>
-        </div>
-        <div class="stats-percent" id="stats-percent">0%</div>
-      </div>
+      <p class="stats-lead" id="stats-lead"></p>
 
-      <div class="stats-cards">
-        <div class="stat-card">
-          <div class="stat-card-num" id="stat-total">0</div>
-          <div class="stat-card-label">Всего слов</div>
-        </div>
-        <div class="stat-card stat-card-learned">
-          <div class="stat-card-num" id="stat-learned">0</div>
-          <div class="stat-card-label">Выучено</div>
-        </div>
-        <div class="stat-card stat-card-progress">
-          <div class="stat-card-num" id="stat-not-learned">0</div>
-          <div class="stat-card-label">Ещё учу</div>
-        </div>
-      </div>
+      <section class="stats-section">
+        <h2>Как разложены карточки</h2>
+        <p class="section-note">Чем лучше вы знаете слово, тем дальше оно уходит и тем реже возвращается на повторение.</p>
+        <div class="boxes" id="boxes"></div>
+      </section>
 
-      <div class="word-section">
-        <h2>Ещё учу</h2>
-        <div id="not-learned-list" class="word-chip-list"></div>
-      </div>
+      <section class="stats-section">
+        <h2>Повторения по дням</h2>
+        <p class="section-note" id="activity-sub"></p>
+        <div class="heatmap-scroll">
+          <div class="heatmap" id="heatmap"></div>
+        </div>
+        <div class="heatmap-legend" aria-hidden="true">
+          меньше <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> больше
+        </div>
+      </section>
 
-      <div class="word-section">
-        <h2>Выучено</h2>
-        <div id="learned-list" class="word-chip-list"></div>
-      </div>
+      <section class="stats-section word-sheets">
+        <div class="word-sheet">
+          <h2>Ещё учу <span id="not-learned-count"></span></h2>
+          <ul id="not-learned-list" class="word-list"></ul>
+        </div>
+        <div class="word-sheet">
+          <h2>Выучено <span id="learned-count"></span></h2>
+          <ul id="learned-list" class="word-list"></ul>
+        </div>
+      </section>
+
+      <p class="stats-export"><a href="/api/export/xlsx" download>Скачать картотеку в Excel</a></p>
     </div>
 
     <div id="stats-empty" class="stats-empty" hidden>
-      <div class="empty-text">В картотеке пока нет слов — добавьте первые на главной странице.</div>
-      <a href="/#app" class="btn btn-primary">Добавить слова</a>
+      <p>В картотеке пока нет слов, поэтому и статистики нет.</p>
+      <a href="/" class="btn btn-pencil">Добавить слова</a>
     </div>
   </main>
 
-  <script src="/static/particles.js"></script>
+  <script src="/static/common.js"></script>
   <script src="/static/stats.js"></script>
+  <script src="/static/particles.js"></script>
 </body>
 </html>
