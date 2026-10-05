@@ -5,6 +5,8 @@ services:
     name: lexi
     runtime: python
     plan: free
+    branch: main
+    autoDeployTrigger: commit   # пересобирать после каждого push в main
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /login
