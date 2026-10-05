@@ -1,0 +1,21 @@
+# Render Blueprint: New → Blueprint → выбрать этот репозиторий.
+# Значения с sync: false Render попросит ввести при создании сервиса.
+services:
+  - type: web
+    name: lexi
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /login
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL       # строка подключения Neon (postgresql://...)
+        sync: false
+      - key: GEMINI_API_KEY     # ключ с https://aistudio.google.com/apikey
+        sync: false
+      - key: SECRET_KEY         # подпись сессий; Render сгенерирует сам
+        generateValue: true
+      - key: DAILY_WORD_LIMIT   # новых слов в сутки для обычных пользователей
+        value: "30"

@@ -233,6 +233,10 @@ kbd {
   50% { transform: translateX(5px); }
 }
 .type-form label { display: block; color: var(--paper-soft); }
+.dictation-translation { font-size: 17px; text-align: right; }
+.listen-row { display: flex; gap: 8px; padding-bottom: 4px; }
+.type-card .listen-row .btn-quiet { color: var(--paper-text); border-color: #c9ccd4; }
+[data-theme="neon"] .type-card .listen-row .btn-quiet { color: var(--text); border-color: var(--drawer-edge); }
 .type-row { display: flex; gap: 8px; margin: 2px 0 6px; }
 .type-row input {
   flex: 1;
@@ -256,6 +260,23 @@ kbd {
 .type-actions { display: flex; gap: 8px; margin: 10px 0 4px; }
 .type-actions .btn-quiet { color: var(--paper-text); border-color: #c9ccd4; }
 .type-actions .btn-quiet:hover { background: var(--paper-shade); }
+
+/* пиксельный кот лежит на верхнем краю карточки */
+.cat-perch {
+  display: flex;
+  justify-content: flex-end;
+  height: 124px;
+  margin: 0 18px -16px 0;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+.cat-perch .pixel-cat {
+  width: 192px;
+  height: 124px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 
 /* ---------- пусто / круг пройден ---------- */
 .review-empty { color: var(--text-soft); font-size: 17px; }
@@ -322,6 +343,8 @@ kbd {
 
 @media (max-width: 560px) {
   .review-wrap { padding: 32px 16px 60px; }
+  .cat-perch { height: 93px; margin-right: 8px; margin-bottom: -12px; }
+  .cat-perch .pixel-cat { width: 144px; height: 93px; }
   .review-title { font-size: 32px; }
   .mode-options { grid-template-columns: 1fr; }
   .grade-row, .done-tally { grid-template-columns: repeat(2, 1fr); }

@@ -9,6 +9,7 @@ venv/
 
 # база данных (генерируется приложением)
 cards.db
+lexi.db
 
 # IDE
 .vscode/

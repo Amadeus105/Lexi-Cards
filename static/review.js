@@ -14,8 +14,8 @@ const dueBanner = document.getElementById("due-banner");
 const kbdHint = document.getElementById("kbd-hint");
 
 const COUNT_OPTIONS = [10, 20, 30, 40, 50];
-const DIRECTION_LABEL = { "en-ru": "английский — русский", "ru-en": "русский — английский" };
-const MODE_LABEL = { flip: "переворот", type: "письменно" };
+const DIRECTION_LABEL = { "en-ru": "английский — русский", "ru-en": "русский — английский", audio: "на слух" };
+const MODE_LABEL = { flip: "переворот", type: "письменно", dictation: "диктант" };
 const SCOPE_LABEL = { due: "пора повторить", all: "все слова", today: "добавленные сегодня" };
 const GRADES = [
   { key: "again", label: "Забыл", cls: "grade-again" },
@@ -311,7 +311,7 @@ function showCurrentCard() {
   // Иначе фокус остаётся на скрытой кнопке, и пробел нажимает её повторно.
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   const card = queue[0];
-  if (reviewMode === "type") renderTypeCard(card);
+  if (reviewMode === "type" || reviewMode === "dictation") renderTypeCard(card);
   else renderFlipCard(card);
 }
 
@@ -396,19 +396,29 @@ function renderFlipCard(card) {
 // ---------- type mode ----------
 
 function renderTypeCard(card) {
+  // В диктанте слово не показывается: его нужно услышать и написать.
+  const isDictation = reviewMode === "dictation";
   const isReversed = direction === "ru-en";
   const frontMain = isReversed ? card.translation : card.word;
   const frontSub = isReversed ? "" : (card.transcription || "");
-  const targetAnswer = isReversed ? card.word : card.translation;
-  const promptLabel = isReversed ? "Напишите это слово по-английски" : "Напишите перевод на русский";
+  const targetAnswer = isReversed || isDictation ? card.word : card.translation;
+  const promptLabel = isDictation
+    ? "Напишите услышанное слово"
+    : isReversed ? "Напишите это слово по-английски" : "Напишите перевод на русский";
+
+  const head = isDictation
+    ? `<div class="listen-row">
+         <button id="listen-btn" class="btn btn-pencil btn-sm" type="button">Прослушать</button>
+         <button id="listen-slow-btn" class="btn btn-quiet btn-sm" type="button">Медленнее</button>
+       </div>`
+    : `<h2 class="card-word">${escapeHtml(frontMain)}</h2>`;
 
   cardArea.innerHTML = `
+    <div class="cat-perch" id="cat-perch"></div>
     <article class="type-card" data-pos="${escapeHtml(card.part_of_speech || "other")}">
-      <div class="card-head">
-        <h2 class="card-word">${escapeHtml(frontMain)}</h2>
-      </div>
+      <div class="card-head" id="type-head">${head}</div>
       <div class="card-lines">
-        ${frontSub ? `<p class="card-transcription">${escapeHtml(frontSub)}</p>` : ""}
+        ${frontSub && !isDictation ? `<p class="card-transcription">${escapeHtml(frontSub)}</p>` : ""}
         <form id="type-form" class="type-form" autocomplete="off">
           <label for="type-input">${promptLabel}</label>
           <div class="type-row">
@@ -431,12 +441,32 @@ function renderTypeCard(card) {
   const typeCard = cardArea.querySelector(".type-card");
 
   input.focus();
+  // Кот спит, пока вы не начали печатать, и просыпается, когда начали.
+  LexiCat.mount(document.getElementById("cat-perch"));
+  LexiCat.setPose("lie");
+  LexiCat.setMood("sleep");
+  input.addEventListener("input", () => {
+    LexiCat.setMood(input.value.trim() ? "watch" : "sleep");
+  });
   kbdHint.innerHTML = `<kbd>Enter</kbd> проверить, ещё раз <kbd>Enter</kbd> перейти к следующей`;
   setKeys(null);
+
+  if (isDictation) {
+    document.getElementById("listen-btn").addEventListener("click", () => {
+      speakWord(card.word);
+      input.focus();
+    });
+    document.getElementById("listen-slow-btn").addEventListener("click", () => {
+      speakWord(card.word, 0.6);
+      input.focus();
+    });
+    speakWord(card.word);
+  }
 
   function reveal(userAnswer) {
     const correct = isAnswerCorrect(userAnswer, targetAnswer);
     const grade = correct ? "good" : "again";
+    LexiCat.setMood(correct ? "happy" : "sad");
 
     form.querySelector("button").disabled = true;
     input.disabled = true;
@@ -445,6 +475,12 @@ function renderTypeCard(card) {
 
     feedback.hidden = false;
     feedback.className = `type-feedback ${correct ? "is-correct" : "is-incorrect"}`;
+    if (isDictation) {
+      // Показываем само слово, раз его не было видно.
+      document.getElementById("type-head").innerHTML = `
+        <h2 class="card-word">${escapeHtml(card.word)}</h2>
+        <p class="card-translation dictation-translation">${escapeHtml(card.translation)}</p>`;
+    }
     feedback.innerHTML = correct
       ? "Верно."
       : `Правильный ответ: <b>${escapeHtml(targetAnswer)}</b>`;

@@ -136,7 +136,8 @@
 /* ---------- заголовки ---------- */
 [data-theme="neon"] .intake h1,
 [data-theme="neon"] .review-title,
-[data-theme="neon"] .stats-title {
+[data-theme="neon"] .stats-title,
+[data-theme="neon"] .auth-title {
   font-weight: 700;
   font-size: 46px;
   letter-spacing: -0.03em;
@@ -389,4 +390,25 @@
   [data-theme="neon"] .intake h1,
   [data-theme="neon"] .review-title,
   [data-theme="neon"] .stats-title { font-size: 32px; }
+}
+
+/* ---------- белый кот светится ---------- */
+[data-theme="neon"] .pixel-cat {
+  filter: drop-shadow(0 0 6px rgba(165, 180, 252, 0.55)) drop-shadow(0 0 14px rgba(34, 211, 238, 0.25));
+}
+
+/* ---------- вход ---------- */
+[data-theme="neon"] .auth-form {
+  border: 1px solid var(--drawer-edge);
+  border-radius: 22px;
+  backdrop-filter: blur(10px);
+}
+[data-theme="neon"] .auth-form input {
+  background: rgba(10, 13, 28, 0.9);
+  color: var(--text);
+}
+[data-theme="neon"] .auth-tab[aria-selected="true"] {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(129, 140, 248, 0.6);
+  color: #fff;
 }

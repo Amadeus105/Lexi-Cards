@@ -47,3 +47,15 @@ class StatsOut(BaseModel):
     reviewed_today: int
     streak: int
     activity: list[ActivityDay]
+
+
+class AuthIn(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
+
+
+class MeOut(BaseModel):
+    username: str
+    is_admin: bool
+    daily_limit: int | None  # None — без лимита (администратор)
+    words_left: int | None

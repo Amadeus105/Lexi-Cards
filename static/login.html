@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Вход — Lexi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400&family=Onest:wght@400;500;600&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css" />
+<link rel="stylesheet" href="/static/neon.css" />
+<script>try{if(localStorage.getItem("lexi-theme")==="neon")document.documentElement.dataset.theme="neon"}catch(e){}</script>
+</head>
+<body>
+
+  <header class="top">
+    <div class="top-inner">
+      <a href="/" class="logo"><span class="logo-card" aria-hidden="true"></span>Lexi</a>
+    </div>
+  </header>
+
+  <main class="auth-wrap">
+    <h1 class="auth-title">Картотека слов</h1>
+    <p class="auth-lead">Английские слова на карточках: перевод, транскрипция и пример делает ИИ, а повторения приходят вовремя.</p>
+
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab" id="tab-login" role="tab" aria-selected="true" type="button">Вход</button>
+      <button class="auth-tab" id="tab-register" role="tab" aria-selected="false" type="button">Регистрация</button>
+    </div>
+
+    <form id="auth-form" class="auth-form" autocomplete="on">
+      <label for="username">Имя</label>
+      <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+      <p class="auth-hint" id="username-hint" hidden>Латинские буквы, цифры и «_», от 3 до 32 символов.</p>
+
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+      <p class="auth-hint" id="password-hint" hidden>Не короче 8 символов. Восстановить забытый пароль нельзя, поэтому сохраните его.</p>
+
+      <div id="auth-error" class="error" role="alert" hidden></div>
+      <button id="auth-submit" class="btn btn-pencil" type="submit">Войти</button>
+    </form>
+  </main>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/login.js"></script>
+</body>
+</html>

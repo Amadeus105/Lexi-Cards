@@ -1,5 +1,17 @@
 // Общие помощники для всех страниц Lexi.
 
+// Часовой пояс — чтобы «сегодня» и серия дней считались по вашему времени, а не по серверу.
+document.cookie = `lexi_tz=${-new Date().getTimezoneOffset()}; path=/; max-age=31536000; SameSite=Lax`;
+
+// Сессия закончилась — на любой запрос сервер ответит 401, и мы отправляем на вход.
+const ON_LOGIN_PAGE = location.pathname.startsWith("/login");
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await nativeFetch(...args);
+  if (res.status === 401 && !ON_LOGIN_PAGE) location.href = "/login";
+  return res;
+};
+
 const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const POS_SHORT = {
@@ -28,12 +40,12 @@ function highlight(sentence, word) {
   return safe.replace(new RegExp(`(${escaped})`, "i"), "<b>$1</b>");
 }
 
-function speakWord(word) {
+function speakWord(word, rate = 0.95) {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(word);
   utter.lang = "en-US";
-  utter.rate = 0.95;
+  utter.rate = rate;
   window.speechSynthesis.speak(utter);
 }
 
@@ -128,3 +140,26 @@ updateNavDue();
   sync();
   bar.insertBefore(btn, document.getElementById("nav-due"));
 })();
+
+// Имя пользователя и выход — справа в шапке.
+async function setupUserMenu() {
+  const bar = document.querySelector(".top-inner");
+  if (!bar || ON_LOGIN_PAGE) return;
+  try {
+    const res = await fetch("/api/me");
+    if (!res.ok) return;
+    const me = await res.json();
+    const box = document.createElement("div");
+    box.className = "user-menu";
+    box.innerHTML = `<span class="user-name" title="${me.is_admin ? "Администратор" : "Ваш аккаунт"}">${escapeHtml(me.username)}</span>
+      <button type="button" class="link-btn user-logout">Выйти</button>`;
+    box.querySelector(".user-logout").addEventListener("click", async () => {
+      await fetch("/api/auth/logout", { method: "POST" });
+      location.href = "/login";
+    });
+    bar.appendChild(box);
+  } catch {
+    /* меню не критично */
+  }
+}
+setupUserMenu();

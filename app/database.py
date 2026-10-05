@@ -1,248 +1,336 @@
-import sqlite3
+"""Хранилище Lexi: SQLite на своём компьютере, Postgres (Neon) на сервере.
+
+Какая база используется, решает переменная окружения DATABASE_URL:
+не задана — локальный файл lexi.db, задана — например, строка подключения Neon.
+Все данные (карточки, повторения, генерации) привязаны к пользователю.
+"""
 import json
+import os
+import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from contextlib import contextmanager
+
+from sqlalchemy import (
+    Boolean, Column, Float, ForeignKey, Index, Integer, MetaData, String, Table, Text,
+    create_engine, delete, func, insert, select, update,
+)
+from sqlalchemy.exc import IntegrityError
 
 from .srs import grade_card
 
 BASE_DIR = Path(__file__).parent.parent
-DB_PATH = BASE_DIR / "cards.db"
+DEFAULT_SQLITE = BASE_DIR / "lexi.db"
 BACKUP_DIR = BASE_DIR / "backups"
 BACKUPS_TO_KEEP = 20
 ACTIVITY_DAYS = 7 * 15  # сколько дней показывать на тепловой карте
 
 
+def database_url() -> str:
+    url = os.environ.get("DATABASE_URL") or f"sqlite:///{DEFAULT_SQLITE.as_posix()}"
+    # Neon и Render отдают postgres:// или postgresql:// — указываем драйвер psycopg 3.
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+_url = database_url()
+engine = create_engine(
+    _url,
+    # Neon закрывает простаивающие соединения — проверяем их перед использованием.
+    pool_pre_ping=True,
+    pool_recycle=300,
+    # Пулер Neon (PgBouncer) может не знать о подготовленных запросах psycopg — отключаем их.
+    connect_args={} if _url.startswith("sqlite") else {"prepare_threshold": None},
+)
+IS_SQLITE = engine.url.get_backend_name() == "sqlite"
+
+metadata = MetaData()
+
+users = Table(
+    "users", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("username", String(32), nullable=False, unique=True),
+    Column("password_hash", String(255), nullable=False),
+    Column("is_admin", Boolean, nullable=False, default=False),
+    Column("created_at", String(32), nullable=False),
+)
+
+cards = Table(
+    "cards", metadata,
+    Column("id", String(36), primary_key=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("word", Text, nullable=False),
+    Column("transcription", Text),
+    Column("part_of_speech", String(20)),
+    Column("translation", Text, nullable=False),
+    Column("example_en", Text),
+    Column("example_ru", Text),
+    Column("synonyms", Text, nullable=False, default="[]"),
+    Column("antonyms", Text, nullable=False, default="[]"),
+    # Время храним строкой в UTC — так же, как раньше, чтобы фронтенд не менялся.
+    Column("created_at", String(32), nullable=False),
+    Column("learned", Boolean, nullable=False, default=False),
+    Column("ease_factor", Float, nullable=False, default=2.5),
+    Column("interval_days", Float, nullable=False, default=0),
+    Column("repetitions", Integer, nullable=False, default=0),
+    Column("due_at", String(40)),
+)
+# У каждого пользователя слово встречается один раз, без учёта регистра.
+Index("ux_cards_user_word", cards.c.user_id, func.lower(cards.c.word), unique=True)
+
+reviews = Table(
+    "reviews", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("card_id", String(36), nullable=False),
+    Column("grade", String(10), nullable=False),
+    Column("reviewed_at", String(40), nullable=False),
+)
+Index("ix_reviews_user_at", reviews.c.user_id, reviews.c.reviewed_at)
+
+# Каждое обращение к Gemini — для дневного лимита. Удаление карточки лимит не возвращает.
+generations = Table(
+    "generations", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("created_at", String(40), nullable=False),
+)
+Index("ix_generations_user_at", generations.c.user_id, generations.c.created_at)
+
+
+class DuplicateError(Exception):
+    pass
+
+
 def init_db():
-    with get_conn() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS cards (
-                id TEXT PRIMARY KEY,
-                word TEXT NOT NULL,
-                transcription TEXT,
-                part_of_speech TEXT,
-                translation TEXT NOT NULL,
-                example_en TEXT,
-                example_ru TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                learned INTEGER DEFAULT 0,
-                synonyms TEXT DEFAULT '[]',
-                antonyms TEXT DEFAULT '[]',
-                ease_factor REAL DEFAULT 2.5,
-                interval_days REAL DEFAULT 0,
-                repetitions INTEGER DEFAULT 0,
-                due_at TEXT
-            )
-            """
-        )
-        # Миграции только ДОБАВЛЯЮТ колонки — существующие данные не трогаются.
-        for ddl in [
-            "ALTER TABLE cards ADD COLUMN learned INTEGER DEFAULT 0",
-            "ALTER TABLE cards ADD COLUMN synonyms TEXT DEFAULT '[]'",
-            "ALTER TABLE cards ADD COLUMN antonyms TEXT DEFAULT '[]'",
-            "ALTER TABLE cards ADD COLUMN ease_factor REAL DEFAULT 2.5",
-            "ALTER TABLE cards ADD COLUMN interval_days REAL DEFAULT 0",
-            "ALTER TABLE cards ADD COLUMN repetitions INTEGER DEFAULT 0",
-            "ALTER TABLE cards ADD COLUMN due_at TEXT",
-        ]:
-            try:
-                conn.execute(ddl)
-            except sqlite3.OperationalError:
-                pass
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS reviews (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                card_id TEXT NOT NULL,
-                grade TEXT NOT NULL,
-                reviewed_at TEXT NOT NULL
-            )
-            """
-        )
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_at ON reviews(reviewed_at)")
-        conn.commit()
+    metadata.create_all(engine)
 
 
 def backup_db():
-    """Копия базы при каждом запуске сервера; хранятся последние BACKUPS_TO_KEEP штук."""
-    if not DB_PATH.exists():
+    """Копия локальной SQLite-базы при запуске. У Neon есть собственное восстановление."""
+    if not IS_SQLITE:
+        return None
+    db_path = Path(engine.url.database)
+    if not db_path.exists():
         return None
     BACKUP_DIR.mkdir(exist_ok=True)
-    target = BACKUP_DIR / f"cards-{datetime.now().strftime('%Y%m%d-%H%M%S')}.db"
-    src = sqlite3.connect(DB_PATH)
+    target = BACKUP_DIR / f"{db_path.stem}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.db"
+    src = sqlite3.connect(db_path)
     dst = sqlite3.connect(target)
     try:
         src.backup(dst)
     finally:
         dst.close()
         src.close()
-    for old in sorted(BACKUP_DIR.glob("cards-*.db"))[:-BACKUPS_TO_KEEP]:
+    for old in sorted(BACKUP_DIR.glob(f"{db_path.stem}-*.db"))[:-BACKUPS_TO_KEEP]:
         old.unlink()
     return target
 
 
-@contextmanager
-def get_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
-def _utc_now_key() -> str:
-    # Формат, сравнимый со строками due_at по первым 19 символам.
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+def _timestamp() -> str:
+    # Формат SQLite CURRENT_TIMESTAMP: "YYYY-MM-DD HH:MM:SS" в UTC.
+    return _now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _decode_row(row: sqlite3.Row) -> dict:
-    d = dict(row)
+def _card(row) -> dict:
+    d = dict(row._mapping)
     for field in ("synonyms", "antonyms"):
-        raw = d.get(field)
         try:
-            d[field] = json.loads(raw) if raw else []
+            d[field] = json.loads(d.get(field) or "[]")
         except (json.JSONDecodeError, TypeError):
             d[field] = []
+    d["learned"] = bool(d.get("learned"))
     return d
 
 
-def list_cards():
-    with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM cards ORDER BY created_at DESC"
-        ).fetchall()
-        return [_decode_row(r) for r in rows]
+# ---------- пользователи ----------
+
+def create_user(username: str, password_hash: str, is_admin: bool = False) -> dict:
+    try:
+        with engine.begin() as conn:
+            conn.execute(insert(users).values(
+                username=username, password_hash=password_hash,
+                is_admin=is_admin, created_at=_timestamp(),
+            ))
+    except IntegrityError as e:
+        raise DuplicateError(username) from e
+    return get_user_by_username(username)
 
 
-def find_by_word(word: str):
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM cards WHERE lower(word) = lower(?)", (word,)
-        ).fetchone()
-        return _decode_row(row) if row else None
+def get_user(user_id: int):
+    with engine.connect() as conn:
+        row = conn.execute(select(users).where(users.c.id == user_id)).first()
+        return dict(row._mapping) if row else None
 
 
-def get_card(card_id: str):
-    with get_conn() as conn:
-        row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        return _decode_row(row) if row else None
+def get_user_by_username(username: str):
+    with engine.connect() as conn:
+        row = conn.execute(select(users).where(users.c.username == username)).first()
+        return dict(row._mapping) if row else None
 
 
-def insert_card(data: dict):
-    card_id = str(uuid.uuid4())
-    with get_conn() as conn:
-        conn.execute(
-            """
-            INSERT INTO cards (
-                id, word, transcription, part_of_speech, translation,
-                example_en, example_ru, synonyms, antonyms
+def set_admin(user_id: int, is_admin: bool = True):
+    with engine.begin() as conn:
+        conn.execute(update(users).where(users.c.id == user_id).values(is_admin=is_admin))
+
+
+# ---------- дневной лимит генераций ----------
+
+def count_generations_since(user_id: int, since: datetime) -> int:
+    with engine.connect() as conn:
+        return conn.execute(
+            select(func.count()).select_from(generations).where(
+                generations.c.user_id == user_id,
+                generations.c.created_at >= since.isoformat(timespec="seconds"),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                card_id,
-                data["word"],
-                data.get("transcription", ""),
-                data.get("partOfSpeech", ""),
-                data["translation"],
-                data.get("example_en", ""),
-                data.get("example_ru", ""),
-                json.dumps(data.get("synonyms", []) or []),
-                json.dumps(data.get("antonyms", []) or []),
-            ),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        return _decode_row(row)
+        ).scalar_one()
 
 
-def delete_card(card_id: str):
-    with get_conn() as conn:
-        conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
-        conn.commit()
+def log_generation(user_id: int):
+    with engine.begin() as conn:
+        conn.execute(insert(generations).values(
+            user_id=user_id, created_at=_now().isoformat(timespec="seconds"),
+        ))
 
 
-def set_learned(card_id: str, learned: bool):
-    with get_conn() as conn:
+# ---------- карточки ----------
+
+def list_cards(user_id: int):
+    with engine.connect() as conn:
+        rows = conn.execute(
+            select(cards).where(cards.c.user_id == user_id)
+            .order_by(cards.c.created_at.desc(), cards.c.id)
+        ).all()
+        return [_card(r) for r in rows]
+
+
+def find_by_word(user_id: int, word: str):
+    with engine.connect() as conn:
+        row = conn.execute(
+            select(cards).where(cards.c.user_id == user_id, func.lower(cards.c.word) == word.lower())
+        ).first()
+        return _card(row) if row else None
+
+
+def get_card(user_id: int, card_id: str):
+    with engine.connect() as conn:
+        row = conn.execute(
+            select(cards).where(cards.c.user_id == user_id, cards.c.id == card_id)
+        ).first()
+        return _card(row) if row else None
+
+
+def insert_card(user_id: int, data: dict, **extra) -> dict:
+    """Добавляет карточку. extra — поля при переносе из старой базы (created_at, SRS и т.п.)."""
+    card_id = extra.pop("id", None) or str(uuid.uuid4())
+    values = dict(
+        id=card_id,
+        user_id=user_id,
+        word=data["word"],
+        transcription=data.get("transcription", ""),
+        part_of_speech=data.get("partOfSpeech", data.get("part_of_speech", "")),
+        translation=data["translation"],
+        example_en=data.get("example_en", ""),
+        example_ru=data.get("example_ru", ""),
+        synonyms=json.dumps(data.get("synonyms", []) or [], ensure_ascii=False),
+        antonyms=json.dumps(data.get("antonyms", []) or [], ensure_ascii=False),
+        created_at=_timestamp(),
+    )
+    values.update(extra)
+    try:
+        with engine.begin() as conn:
+            conn.execute(insert(cards).values(**values))
+    except IntegrityError as e:
+        raise DuplicateError(data["word"]) from e
+    return get_card(user_id, card_id)
+
+
+def delete_card(user_id: int, card_id: str):
+    with engine.begin() as conn:
+        conn.execute(delete(cards).where(cards.c.user_id == user_id, cards.c.id == card_id))
+
+
+def set_learned(user_id: int, card_id: str, learned: bool):
+    with engine.begin() as conn:
         conn.execute(
-            "UPDATE cards SET learned = ? WHERE id = ?",
-            (1 if learned else 0, card_id),
+            update(cards).where(cards.c.user_id == user_id, cards.c.id == card_id)
+            .values(learned=learned)
         )
-        conn.commit()
-        row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        return _decode_row(row) if row else None
+    return get_card(user_id, card_id)
 
 
-def review_card(card_id: str, grade: str):
+def review_card(user_id: int, card_id: str, grade: str):
     """Применяет оценку по алгоритму SRS и записывает её в историю повторений."""
-    with get_conn() as conn:
-        row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        if not row:
-            return None
-        srs = grade_card(grade, row["ease_factor"], row["interval_days"], row["repetitions"])
+    card = get_card(user_id, card_id)
+    if not card:
+        return None
+    srs = grade_card(grade, card["ease_factor"], card["interval_days"], card["repetitions"])
+    with engine.begin() as conn:
         conn.execute(
-            """
-            UPDATE cards
-            SET ease_factor = ?, interval_days = ?, repetitions = ?, due_at = ?, learned = ?
-            WHERE id = ?
-            """,
-            (
-                srs["ease_factor"],
-                srs["interval_days"],
-                srs["repetitions"],
-                srs["due_at"],
-                1 if grade in ("good", "easy") else 0,
-                card_id,
-            ),
+            update(cards).where(cards.c.user_id == user_id, cards.c.id == card_id).values(
+                ease_factor=srs["ease_factor"],
+                interval_days=srs["interval_days"],
+                repetitions=srs["repetitions"],
+                due_at=srs["due_at"],
+                learned=grade in ("good", "easy"),
+            )
         )
-        conn.execute(
-            "INSERT INTO reviews (card_id, grade, reviewed_at) VALUES (?, ?, ?)",
-            (card_id, grade, datetime.now(timezone.utc).isoformat(timespec="seconds")),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        return _decode_row(row)
+        conn.execute(insert(reviews).values(
+            user_id=user_id, card_id=card_id, grade=grade,
+            reviewed_at=_now().isoformat(timespec="seconds"),
+        ))
+    return get_card(user_id, card_id)
 
 
-def _local_date(iso_utc: str):
+def add_review_record(user_id: int, card_id: str, grade: str, reviewed_at: str):
+    """Для переноса истории повторений из старой базы."""
+    with engine.begin() as conn:
+        conn.execute(insert(reviews).values(
+            user_id=user_id, card_id=card_id, grade=grade, reviewed_at=reviewed_at,
+        ))
+
+
+# ---------- статистика ----------
+
+def _local_date(iso_utc: str, tz):
     dt = datetime.fromisoformat(iso_utc)
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone().date()
+    return dt.astimezone(tz).date()
 
 
-def get_stats():
-    now_key = _utc_now_key()
-    with get_conn() as conn:
-        total = conn.execute("SELECT COUNT(*) AS c FROM cards").fetchone()["c"]
-        learned = conn.execute(
-            "SELECT COUNT(*) AS c FROM cards WHERE learned = 1"
-        ).fetchone()["c"]
-        new = conn.execute(
-            "SELECT COUNT(*) AS c FROM cards WHERE due_at IS NULL"
-        ).fetchone()["c"]
-        due = conn.execute(
-            "SELECT COUNT(*) AS c FROM cards WHERE due_at IS NOT NULL AND substr(due_at, 1, 19) <= ?",
-            (now_key,),
-        ).fetchone()["c"]
+def get_stats(user_id: int, tz_offset_minutes: int = 0):
+    """tz_offset_minutes — смещение часового пояса пользователя (из браузера),
+    чтобы «сегодня» и серия дней считались по его местному времени, а не по времени сервера."""
+    tz = timezone(timedelta(minutes=tz_offset_minutes))
+    now_key = _now().strftime("%Y-%m-%dT%H:%M:%S")
+    mine = cards.c.user_id == user_id
+    with engine.connect() as conn:
+        count = lambda *where: conn.execute(  # noqa: E731
+            select(func.count()).select_from(cards).where(mine, *where)
+        ).scalar_one()
+        total = count()
+        learned = count(cards.c.learned.is_(True))
+        new = count(cards.c.due_at.is_(None))
+        due = count(cards.c.due_at.is_not(None), func.substr(cards.c.due_at, 1, 19) <= now_key)
 
-        since = (datetime.now(timezone.utc) - timedelta(days=ACTIVITY_DAYS + 1)).isoformat()
-        review_times = [
-            r["reviewed_at"]
-            for r in conn.execute(
-                "SELECT reviewed_at FROM reviews WHERE reviewed_at >= ?", (since,)
-            )
-        ]
+        since = (_now() - timedelta(days=ACTIVITY_DAYS + 1)).isoformat(timespec="seconds")
+        review_times = conn.execute(
+            select(reviews.c.reviewed_at).where(reviews.c.user_id == user_id, reviews.c.reviewed_at >= since)
+        ).scalars().all()
 
     per_day: dict = {}
     for ts in review_times:
-        day = _local_date(ts)
+        day = _local_date(ts, tz)
         per_day[day] = per_day.get(day, 0) + 1
 
-    today = datetime.now().date()
+    today = _now().astimezone(tz).date()
     activity = [
         {"date": (today - timedelta(days=i)).isoformat(),
          "count": per_day.get(today - timedelta(days=i), 0)}

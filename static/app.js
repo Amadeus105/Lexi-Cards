@@ -244,6 +244,7 @@ form.addEventListener("submit", async (e) => {
   addBtn.disabled = false;
   label.textContent = "Добавить";
   updateSummary();
+  updateWordsLeft();
 });
 
 searchInput.addEventListener("input", () => {
@@ -271,4 +272,22 @@ sortSelect.addEventListener("change", () => {
   render();
 });
 
+// Сколько новых слов ещё можно добавить сегодня (у администратора лимита нет).
+async function updateWordsLeft() {
+  const hint = document.querySelector(".form-hint");
+  try {
+    const res = await fetch("/api/me");
+    if (!res.ok) return;
+    const me = await res.json();
+    if (me.words_left === null) return;
+    hint.dataset.base = hint.dataset.base || hint.textContent;
+    hint.textContent = me.words_left > 0
+      ? `${hint.dataset.base} Сегодня можно добавить ещё ${countWords(me.words_left)}.`
+      : `Лимит на сегодня исчерпан: ${countWords(me.daily_limit)} в сутки. Новые слова можно будет добавить завтра.`;
+  } catch {
+    /* подсказка не критична */
+  }
+}
+
 loadCards();
+updateWordsLeft();
